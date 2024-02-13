@@ -26,7 +26,6 @@ impl FromSql<'_> for Sexe {
 }
 
 fn test2(st: &str) {
-    println!("{}",st);
     let mut client = Client::connect(st, NoTls).unwrap();
 
     for row in client.query("SELECT nom,prenom,sexe,annee_n,mois_n,jour_n,insee_n,commune_n,pays_n,annee_d,mois_d,jour_d,insee_d,num_acte FROM dc where nom='MARTIN' and prenom ~* '^NICOLAS'", &[]).unwrap() {
@@ -74,6 +73,5 @@ fn main() {
     let st =
         "hostaddr=".to_owned()+&hostaddr+" user="+&user+
         " password="+&password+" dbname="+&dbname;
-    println!("{}",st);
     test2(&st);
 }
