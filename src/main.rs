@@ -25,29 +25,28 @@ impl FromSql<'_> for Sexe {
     }
 }
 
-fn test2(st: &str) {
-    let mut client = Client::connect(st, NoTls).unwrap();
-
+fn test2(mut client: Client) -> Client{
     for row in client.query("SELECT nom,prenom,sexe,annee_n,mois_n,jour_n,insee_n,commune_n,pays_n,annee_d,mois_d,jour_d,insee_d,num_acte FROM dc where nom='MARTIN' and prenom ~* '^NICOLAS'", &[]).unwrap() {
 //	let id: i32 = row.get(0);
-	let nom: &str = row.get(0);
-	let prenom: &str = row.get(1);
-	let sexe: Sexe = row.get(2);
-	let annee_n:i16 =row.get(3);
-  	let mois_n:i16 =row.get(4);
-	let jour_n:i16 =row.get(5);
-  	let insee_n: &str =row.get(6);
-  	let commune_n:&str =row.get(7);
-  	let pays_n:&str =row.get(8);
-  	let annee_d:i16 =row.get(9);
-  	let mois_d:i16 =row.get(10);
-	let jour_d:i16 =row.get(11);
-  	let insee_d:  &str =row.get(12);
-  	let num_acte: &str =row.get(13);
+	let nom : &str = row.get(0);
+	let prenom : &str = row.get(1);
+	let sexe : Sexe = row.get(2);
+	let annee_n : i16 = row.get(3);
+  	let mois_n : i16 = row.get(4);
+	let jour_n : i16 = row.get(5);
+  	let insee_n : &str = row.get(6);
+  	let commune_n : &str = row.get(7);
+  	let pays_n : &str = row.get(8);
+  	let annee_d : i16 = row.get(9);
+  	let mois_d : i16 = row.get(10);
+	let jour_d : i16 = row.get(11);
+  	let insee_d : &str = row.get(12);
+  	let num_acte : &str = row.get(13);
 	println!(
 	    "found person: {} {} {:?} {} {} {} {} {} {} {} {} {} {} {} ",
 	    nom,prenom,sexe,annee_n,mois_n,jour_n,insee_n,commune_n,pays_n,annee_d,mois_d,jour_d,insee_d,num_acte);
     }
+    client
 }
 
 use argparse::{ArgumentParser, Store};
@@ -70,8 +69,10 @@ fn main() {
             .add_option(&["-d","--dbname"], Store,"Dbname (default dc)");
         ap.parse_args_or_exit();
     }
+
     let st =
         "hostaddr=".to_owned()+&hostaddr+" user="+&user+
         " password="+&password+" dbname="+&dbname;
-    test2(&st);
+    let mut client = Client::connect(&st, NoTls).unwrap();
+    client = test2(client);
 }
