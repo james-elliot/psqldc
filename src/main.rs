@@ -1,44 +1,17 @@
-use postgres::{Client, NoTls};
-
-
-fn test() {
-    let mut client = Client::connect("hostaddr=192.168.1.1 user=alliot password= dbname=alliot", NoTls).unwrap();
-    
-    client.batch_execute("
-    CREATE TABLE person (
-        id      SERIAL PRIMARY KEY,
-        name    TEXT NOT NULL,
-        data    BYTEA
-    )
-").unwrap();
-    
-    let name = "Ferris";
-    let data = None::<&[u8]>;
-    client.execute(
-	"INSERT INTO person (name, data) VALUES ($1, $2)",
-	&[&name, &data],
-    ).unwrap();
-    
-    for row in client.query("SELECT id, name, data FROM person", &[]).unwrap() {
-	let id: i32 = row.get(0);
-	let name: &str = row.get(1);
-	let data: Option<&[u8]> = row.get(2);
-	
-	println!("found person: {} {} {:?}", id, name, data);
-    }
-}
-
 #[derive(Debug)]
 pub enum Sexe {
     H,
     F,
 }
+
 use std::error::Error;
 use postgres::types::FromSql;
 use postgres::types::Type;
+use postgres::{Client, NoTls};
+
 impl FromSql<'_> for Sexe {
     fn from_sql(
-	_sql_type: &Type, 
+	_sql_type: &Type,
 	value: &[u8]
     ) -> Result<Self, Box<dyn Error + Sync + Send>> {
 	match value {
@@ -52,9 +25,10 @@ impl FromSql<'_> for Sexe {
     }
 }
 
-fn test2() {
-    let mut client = Client::connect("hostaddr=192.168.1.1 user=alliot password= dbname=dc", NoTls).unwrap();
-    
+fn test2(st: &str) {
+    println!("{}",st);
+    let mut client = Client::connect(st, NoTls).unwrap();
+
     for row in client.query("SELECT nom,prenom,sexe,annee_n,mois_n,jour_n,insee_n,commune_n,pays_n,annee_d,mois_d,jour_d,insee_d,num_acte FROM dc where nom='MARTIN' and prenom ~* '^NICOLAS'", &[]).unwrap() {
 //	let id: i32 = row.get(0);
 	let nom: &str = row.get(0);
@@ -71,13 +45,35 @@ fn test2() {
 	let jour_d:i16 =row.get(11);
   	let insee_d:  &str =row.get(12);
   	let num_acte: &str =row.get(13);
-	
 	println!(
 	    "found person: {} {} {:?} {} {} {} {} {} {} {} {} {} {} {} ",
 	    nom,prenom,sexe,annee_n,mois_n,jour_n,insee_n,commune_n,pays_n,annee_d,mois_d,jour_d,insee_d,num_acte);
     }
 }
 
+use argparse::{ArgumentParser, Store};
 fn main() {
-    test2();
+    let mut hostaddr = "192.168.1.1".to_string();
+    let mut user = "alliot".to_string();
+    let mut password = "".to_string();
+    let mut dbname = "dc".to_string();
+
+    { // this block limits scope of borrows by ap.refer() method
+        let mut ap = ArgumentParser::new();
+        ap.set_description("Finding dead people");
+        ap.refer(&mut hostaddr)
+            .add_option(&["-h","--hostaddr"], Store,"Hostaddr (default 192.168.1.1)");
+        ap.refer(&mut user)
+            .add_option(&["-u","--user"], Store,"User (default alliot)");
+        ap.refer(&mut password)
+            .add_option(&["-p","--password"], Store,"Password (default '')");
+        ap.refer(&mut dbname)
+            .add_option(&["-d","--dbname"], Store,"Dbname (default dc)");
+        ap.parse_args_or_exit();
+    }
+    let st =
+        "hostaddr=".to_owned()+&hostaddr+" user="+&user+
+        " password="+&password+" dbname="+&dbname;
+    println!("{}",st);
+    test2(&st);
 }
