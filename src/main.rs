@@ -25,7 +25,7 @@ impl FromSql<'_> for Sexe {
     }
 }
 
-fn test2(mut client: Client,nom: &str,prenom: &str) -> Client{
+fn test2(client: &mut Client,nom: &str,prenom: &str) {
 //    for row in client.query("SELECT nom,prenom,sexe,annee_n,mois_n,jour_n,insee_n,commune_n,pays_n,annee_d,mois_d,jour_d,insee_d,num_acte FROM dc where nom='MARTIN' and prenom ~* '^NICOLAS'", &[]).unwrap() {
     for row in client.query("SELECT nom,prenom,sexe,annee_n,mois_n,jour_n,insee_n,commune_n,pays_n,annee_d,mois_d,jour_d,insee_d,num_acte FROM dc where nom=$1 and prenom ~* $2", &[&nom,&prenom]).unwrap() {
 //	let id: i32 = row.get(0);
@@ -47,7 +47,6 @@ fn test2(mut client: Client,nom: &str,prenom: &str) -> Client{
 	    "found person: {} {} {:?} {} {} {} {} {} {} {} {} {} {} {} ",
 	    nom,prenom,sexe,annee_n,mois_n,jour_n,insee_n,commune_n,pays_n,annee_d,mois_d,jour_d,insee_d,num_acte);
     }
-    client
 }
 
 use argparse::{ArgumentParser, Store};
@@ -81,5 +80,5 @@ fn main() {
         "hostaddr=".to_owned()+&hostaddr+" user="+&user+
         " password="+&password+" dbname="+&dbname;
     let mut client = Client::connect(&st, NoTls).unwrap();
-    client = test2(client,&name,&surname);
+    test2(&mut client,&name,&surname);
 }
