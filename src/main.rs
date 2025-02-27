@@ -146,6 +146,33 @@ impl FromSql<'_> for Sexe {
     }
 }
 
+<<<<<<< HEAD
+=======
+fn test2(client: &mut Client,nom: &str,prenom: &str) {
+//    for row in client.query("SELECT nom,prenom,sexe,annee_n,mois_n,jour_n,insee_n,commune_n,pays_n,annee_d,mois_d,jour_d,insee_d,num_acte FROM dc where nom='MARTIN' and prenom ~* '^NICOLAS'", &[]).unwrap() {
+    for row in client.query("SELECT nom,prenom,sexe,annee_n,mois_n,jour_n,insee_n,commune_n,pays_n,annee_d,mois_d,jour_d,insee_d,num_acte FROM dc where nom=$1 and prenom ~* $2", &[&nom,&prenom]).unwrap() {
+//	let id: i32 = row.get(0);
+	let nom: &str = row.get(0);
+	let prenom: &str = row.get(1);
+	let sexe: Sexe = row.get(2);
+	let annee_n: i16 = row.get(3);
+  	let mois_n: i16 = row.get(4);
+	let jour_n: i16 = row.get(5);
+  	let insee_n: &str = row.get(6);
+  	let commune_n: &str = row.get(7);
+  	let pays_n: &str = row.get(8);
+  	let annee_d: i16 = row.get(9);
+  	let mois_d: i16 = row.get(10);
+	let jour_d: i16 = row.get(11);
+  	let insee_d: &str = row.get(12);
+  	let num_acte: &str = row.get(13);
+	println!(
+	    "found person: {} {} {:?} {} {} {} {} {} {} {} {} {} {} {} ",
+	    nom,prenom,sexe,annee_n,mois_n,jour_n,insee_n,commune_n,pays_n,annee_d,mois_d,jour_d,insee_d,num_acte);
+    }
+}
+
+>>>>>>> 94a0a91feea4629efab619bcf863b8fa33954af5
 use argparse::{ArgumentParser, Store};
 use rpassword::read_password;
 fn main() {
@@ -178,7 +205,12 @@ fn main() {
     let st =
         "hostaddr=".to_owned()+&hostaddr+" user="+&user+
         " password="+&password+" dbname="+&dbname;
+<<<<<<< HEAD
     let client = Client::connect(&st, NoTls).unwrap();
     test_names(client);
 //    read_write_csv(client,"/mnt/c/Users/alliot/Downloads/patients_2024.csv");
+=======
+    let mut client = Client::connect(&st, NoTls).unwrap();
+    test2(&mut client,&name,&surname);
+>>>>>>> 94a0a91feea4629efab619bcf863b8fa33954af5
 }
