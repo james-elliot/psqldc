@@ -146,8 +146,6 @@ impl FromSql<'_> for Sexe {
     }
 }
 
-<<<<<<< HEAD
-=======
 fn test2(client: &mut Client,nom: &str,prenom: &str) {
 //    for row in client.query("SELECT nom,prenom,sexe,annee_n,mois_n,jour_n,insee_n,commune_n,pays_n,annee_d,mois_d,jour_d,insee_d,num_acte FROM dc where nom='MARTIN' and prenom ~* '^NICOLAS'", &[]).unwrap() {
     for row in client.query("SELECT nom,prenom,sexe,annee_n,mois_n,jour_n,insee_n,commune_n,pays_n,annee_d,mois_d,jour_d,insee_d,num_acte FROM dc where nom=$1 and prenom ~* $2", &[&nom,&prenom]).unwrap() {
@@ -172,7 +170,6 @@ fn test2(client: &mut Client,nom: &str,prenom: &str) {
     }
 }
 
->>>>>>> 94a0a91feea4629efab619bcf863b8fa33954af5
 use argparse::{ArgumentParser, Store};
 use rpassword::read_password;
 fn main() {
@@ -205,12 +202,8 @@ fn main() {
     let st =
         "hostaddr=".to_owned()+&hostaddr+" user="+&user+
         " password="+&password+" dbname="+&dbname;
-<<<<<<< HEAD
+
     let client = Client::connect(&st, NoTls).unwrap();
     test_names(client);
 //    read_write_csv(client,"/mnt/c/Users/alliot/Downloads/patients_2024.csv");
-=======
-    let mut client = Client::connect(&st, NoTls).unwrap();
-    test2(&mut client,&name,&surname);
->>>>>>> 94a0a91feea4629efab619bcf863b8fa33954af5
 }
