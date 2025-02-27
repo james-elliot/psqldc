@@ -18,7 +18,7 @@ use fuzzy_matcher::FuzzyMatcher;
 use fuzzy_matcher::skim::SkimMatcherV2;
 use std::cmp::min;
 fn read_write_csv(mut client: Client,path: &str)  {
-//    let matcher = SkimMatcherV2::default();
+    let matcher = SkimMatcherV2::default();
     let file = std::fs::File::open(path).unwrap();
     let mut reader = csv::ReaderBuilder::new().delimiter(b',').has_headers(true).from_reader(file);
     let output_file = std::fs::File::create("output.csv").unwrap();
@@ -51,9 +51,10 @@ fn read_write_csv(mut client: Client,path: &str)  {
 		tscore += ((dim-i) as f32)*rust_fuzzy_search::fuzzy_compare(&prenoms_complet[i], &prenoms[i]);
 	    }
 	    tscore /=  coefs as f32;
-//	    let _score = matcher.fuzzy_match(&prenom_complet, &prenom);
-//	    let _score2 = levenshtein::levenshtein(&prenom_complet, &prenom);
-//	    println!("{} {} : {} {} {} {}",prenom,prenom_complet,vscore,score2,score3,tscore);
+	    let score = matcher.fuzzy_match(&prenoms_complet[0], &prenoms[0]);
+            let vscore = if let Some(s)=score{s} else {0};
+	    let score2 = levenshtein::levenshtein(&prenoms_complet[0], &prenoms[0]);
+	    println!("{} {} : {} {} {} ",prenom,prenom_complet,vscore,score2,tscore);
 	    if tscore >= best_score{
   		let annee_d: i16 = row.get(1);
   		let mois_d: i16 = row.get(2);
@@ -97,7 +98,7 @@ fn test_names(mut client: Client)  {
 	    names.insert(nom.to_string(),(prenoms[0].to_string(),insee_n.to_string(),yd,md,dd,insee_d.to_string()));
 	}
 	let (mut dup,mut dup2,mut dup3,mut dup4)=(0,0,0,0);
-	for (key,values) in names.iter_all() {
+	for (_key,values) in names.iter_all() {
 	    let mut v = values.clone();
 	    v.sort();
 	    for i in 0..v.len()-1 {
@@ -126,8 +127,7 @@ pub enum Sexe {
 }
 
 use std::error::Error;
-use postgres::types::FromSql;
-use postgres::types::Type;
+use postgres::types::{FromSql,Type};
 use postgres::{Client, NoTls};
 
 impl FromSql<'_> for Sexe {
@@ -146,30 +146,6 @@ impl FromSql<'_> for Sexe {
     }
 }
 
-fn test2(client: &mut Client,nom: &str,prenom: &str) {
-//    for row in client.query("SELECT nom,prenom,sexe,annee_n,mois_n,jour_n,insee_n,commune_n,pays_n,annee_d,mois_d,jour_d,insee_d,num_acte FROM dc where nom='MARTIN' and prenom ~* '^NICOLAS'", &[]).unwrap() {
-    for row in client.query("SELECT nom,prenom,sexe,annee_n,mois_n,jour_n,insee_n,commune_n,pays_n,annee_d,mois_d,jour_d,insee_d,num_acte FROM dc where nom=$1 and prenom ~* $2", &[&nom,&prenom]).unwrap() {
-//	let id: i32 = row.get(0);
-	let nom: &str = row.get(0);
-	let prenom: &str = row.get(1);
-	let sexe: Sexe = row.get(2);
-	let annee_n: i16 = row.get(3);
-  	let mois_n: i16 = row.get(4);
-	let jour_n: i16 = row.get(5);
-  	let insee_n: &str = row.get(6);
-  	let commune_n: &str = row.get(7);
-  	let pays_n: &str = row.get(8);
-  	let annee_d: i16 = row.get(9);
-  	let mois_d: i16 = row.get(10);
-	let jour_d: i16 = row.get(11);
-  	let insee_d: &str = row.get(12);
-  	let num_acte: &str = row.get(13);
-	println!(
-	    "found person: {} {} {:?} {} {} {} {} {} {} {} {} {} {} {} ",
-	    nom,prenom,sexe,annee_n,mois_n,jour_n,insee_n,commune_n,pays_n,annee_d,mois_d,jour_d,insee_d,num_acte);
-    }
-}
-
 use argparse::{ArgumentParser, Store};
 use rpassword::read_password;
 fn main() {
@@ -177,9 +153,7 @@ fn main() {
     let mut dbname = "dc".to_string();
     let mut user = "alliot".to_string();
     let mut password = "".to_string();
-//    let mut name = "MARTIN".to_string();
-//    let mut surname = "".to_string();
-    
+
     { // this block limits scope of borrows by ap.refer() method
         let mut ap = ArgumentParser::new();
         ap.set_description("Finding dead people");
@@ -198,11 +172,10 @@ fn main() {
 	println!("Please enter password:");
 	password = read_password().expect("Failed to read input");
     }
-    
+
     let st =
         "hostaddr=".to_owned()+&hostaddr+" user="+&user+
         " password="+&password+" dbname="+&dbname;
-
     let client = Client::connect(&st, NoTls).unwrap();
     test_names(client);
 //    read_write_csv(client,"/mnt/c/Users/alliot/Downloads/patients_2024.csv");
