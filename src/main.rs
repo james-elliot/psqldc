@@ -1,7 +1,8 @@
 #[allow(non_snake_case)]
 #[derive(Debug, serde::Deserialize,serde::Serialize)]
 #[allow(dead_code)]
- struct DataCsv  {
+/*
+struct DataCsv  {
      ICCA_stay_id:Option<String>,
      IEP:Option<String>,
      IPP:Option<String>,
@@ -13,60 +14,84 @@
      Conclusion:Option<String>,
      Décè:Option<String>,
  }
+ */
+struct DataCsv  {
+    IPP:Option<String>,
+    Nom:Option<String>,
+    NomJF:Option<String>,
+    Prenom:Option<String>,
+    DtNaiss:Option<String>,
+    Décès:Option<String>,
+ }
 
-use fuzzy_matcher::FuzzyMatcher;
-use fuzzy_matcher::skim::SkimMatcherV2;
-use std::cmp::min;
+//use fuzzy_matcher::FuzzyMatcher;0
+//use fuzzy_matcher::skim::SkimMatcherV2;
+//use std::cmp::min;
+use std::collections::HashSet;
 fn read_write_csv(mut client: Client,path: &str)  {
-    let matcher = SkimMatcherV2::default();
+//    let matcher = SkimMatcherV2::default();
     let file = std::fs::File::open(path).unwrap();
-    let mut reader = csv::ReaderBuilder::new().delimiter(b',').has_headers(true).from_reader(file);
+    let mut reader = csv::ReaderBuilder::new().delimiter(b';').has_headers(true).from_reader(file);
     let output_file = std::fs::File::create("output.csv").unwrap();
     let mut writer = csv::WriterBuilder::new().delimiter(b',').has_headers(true).from_writer(output_file);
+    let mut ipps = HashSet::new();
     for result in reader.deserialize::<DataCsv>() {
         let mut r = result.unwrap();
-	let nom = r.Nom.clone().unwrap();
-	let prenom = r.Prenom.clone().unwrap();
-	let prenoms: Vec<&str> = prenom.split(&['-', ' ', ','][..]).collect();
-	let date = r.Date_de_naissance.clone().unwrap();
-	let (date_part,_time_part) = date.split_once('T').unwrap();
-	let parts: Vec<&str> = date_part.split('-').collect();
-	let (annee, mois, jour) = (parts[0], parts[1], parts[2]);
-	let v_jour:i16=jour.parse().unwrap();
-	let v_mois:i16=mois.parse().unwrap();
-	let v_annee:i16=annee.parse().unwrap();
-//	let deces = if let Some(x)=r.Décè.clone() {if x=="true" {println!("grrr");true} else{false}} else {false};
-	let deces = if let Some(x)=r.Décè.clone() {x=="true"} else {false};
-	r.Décè=None;
-	let mut best_score = 0.5;
-	//	for row in client.query("SELECT prenom,annee_d,mois_d,jour_d FROM dc where jour_n=$1 and mois_n=$2 and annee_n=$3 and nom=$4 and prenom ~* $5 ", &[&v_jour,&v_mois,&v_annee,&nom,&prenom]).unwrap() {
-	//	for row in client.query("SELECT prenom,annee_d,mois_d,jour_d FROM dc where jour_n=$1 and mois_n=$2 and annee_n=$3 and nom=$4 and prenom like $5", &[&v_jour,&v_mois,&v_annee,&nom,&(prenom.clone()+"%")]).unwrap() {
-	for row in client.query("SELECT prenom,annee_d,mois_d,jour_d FROM dc where jour_n=$1 and mois_n=$2 and annee_n=$3 and nom=$4", &[&v_jour,&v_mois,&v_annee,&nom]).unwrap() {
-	    let prenom_complet: &str = row.get(0);
-	    let prenoms_complet: Vec<&str> = prenom_complet.split(&['-', ' ', ','][..]).collect();
-	    let dim = min(3,min(prenoms_complet.len(),prenoms.len()));
-	    let (mut tscore,mut coefs) = (0.,0);
-	    for i in 0..dim {
-		coefs += dim-i;
-		tscore += ((dim-i) as f32)*rust_fuzzy_search::fuzzy_compare(&prenoms_complet[i], &prenoms[i]);
+	let ipp = r.IPP.clone().unwrap();
+	if !ipps.contains(&ipp) {
+	    ipps.insert(ipp);
+	    let mut nom = r.Nom.clone().unwrap();
+	    if let Some(nomjf) = r.NomJF.clone() {
+		nom=nomjf;
 	    }
-	    tscore /=  coefs as f32;
-	    let score = matcher.fuzzy_match(&prenoms_complet[0], &prenoms[0]);
-            let vscore = if let Some(s)=score{s} else {0};
-	    let score2 = levenshtein::levenshtein(&prenoms_complet[0], &prenoms[0]);
-	    println!("{} {} : {} {} {} ",prenom,prenom_complet,vscore,score2,tscore);
-	    if tscore >= best_score{
-  		let annee_d: i16 = row.get(1);
-  		let mois_d: i16 = row.get(2);
-		let jour_d: i16 = row.get(3);
-		let date = jour_d.to_string()+"/"+&mois_d.to_string()+"/"+&annee_d.to_string();
-		r.Décè=Some(date.clone());
-		best_score=tscore;
-		if tscore!=1.0 {println!("{}, {}, {} : {}, {}",prenom,prenom_complet,nom,date,tscore)};
+	    let prenom = r.Prenom.clone().unwrap();
+	    let prenoms: Vec<&str> = prenom.split(&['-', ' ', ','][..]).collect();
+	    let date = r.DtNaiss.clone().unwrap();
+	    //	let (date_part,_time_part) = date.split_once('T').unwrap();
+	    let parts: Vec<&str> = date.split('/').collect();
+	    let (jour,mois,annee) = (parts[0], parts[1], parts[2]);
+	    let v_jour:i16=jour.parse().unwrap();
+	    let v_mois:i16=mois.parse().unwrap();
+	    let v_annee:i16=annee.parse().unwrap();
+	    //	let deces = if let Some(x)=r.Décè.clone() {if x=="true" {println!("grrr");true} else{false}} else {false};
+	    let deces = if let Some(x)=r.Décès.clone() {x=="VRAI"} else {false};
+	    let tmp = r.Décès.clone();
+	    r.Décès=None;
+	    //	let mut best_score = 0.5;
+	    //	for row in client.query("SELECT prenom,annee_d,mois_d,jour_d FROM dc where jour_n=$1 and mois_n=$2 and annee_n=$3 and nom=$4 and prenom ~* $5 ", &[&v_jour,&v_mois,&v_annee,&nom,&prenom]).unwrap() {
+	    //	for row in client.query("SELECT prenom,annee_d,mois_d,jour_d FROM dc where jour_n=$1 and mois_n=$2 and annee_n=$3 and nom=$4 and prenom like $5", &[&v_jour,&v_mois,&v_annee,&nom,&(prenom.clone()+"%")]).unwrap() {
+	    //	for row in client.query("SELECT prenom,annee_d,mois_d,jour_d FROM dc where jour_n=$1 and mois_n=$2 and annee_n=$3 and nom=$4", &[&v_jour,&v_mois,&v_annee,&nom]).unwrap() {
+	    for row in client.query("SELECT prenom,annee_d,mois_d,jour_d,nom FROM dc where jour_n=$1 and mois_n=$2 and annee_n=$3", &[&v_jour,&v_mois,&v_annee]).unwrap() {
+		let prenom_complet: &str = row.get(0);
+		let prenoms_complet: Vec<&str> = prenom_complet.split(&['-', ' ', ','][..]).collect();
+		//	    let dim = min(3,min(prenoms_complet.len(),prenoms.len()));
+		//	    let (mut tscore,mut coefs) = (0.,0);
+		//	    for i in 0..dim {
+		//		coefs += dim-i;
+		//		tscore += ((dim-i) as f32)*rust_fuzzy_search::fuzzy_compare(&prenoms_complet[i], &prenoms[i]);
+		//	    }
+		//	    tscore /=  coefs as f32;
+		//	    let score = matcher.fuzzy_match(&prenoms_complet[0], &prenoms[0]);
+		//            let vscore = if let Some(s)=score{s} else {0};
+		let lnom:&str = row.get(4);
+		let score1 = levenshtein::levenshtein(&nom, &lnom);
+		let score2 = levenshtein::levenshtein(&prenoms_complet[0], &prenoms[0]);
+		if score1<1 && score2 <= 1{
+		    println!("{} / {} / s1:{} //// {} / {} / s2:{}",nom,lnom,score1,prenom,prenom_complet,score2);
+  		    let annee_d: i16 = row.get(1);
+  		    let mois_d: i16 = row.get(2);
+		    let jour_d: i16 = row.get(3);
+		    let date = jour_d.to_string()+"/"+&mois_d.to_string()+"/"+&annee_d.to_string();
+		    r.Décès=Some(date.clone());
+		}
 	    }
+	    if deces && r.Décès.is_none() {
+		println!("Zorglub:{} {} {}",prenom,nom,date);
+		r.Décès=tmp;
+	    };
+	    writer.serialize(&r).unwrap();
+	    writer.flush();
 	}
-	if deces && r.Décè.is_none() {println!("Zorglub:{} {} {}",prenom,nom,date)};
-	writer.serialize(&r).unwrap();
     }
 }
 
@@ -177,6 +202,7 @@ fn main() {
         "hostaddr=".to_owned()+&hostaddr+" user="+&user+
         " password="+&password+" dbname="+&dbname;
     let client = Client::connect(&st, NoTls).unwrap();
-    test_names(client);
+//    test_names(client);
 //    read_write_csv(client,"/mnt/c/Users/alliot/Downloads/patients_2024.csv");
+    read_write_csv(client,"/mnt/c/Users/alliot/Downloads/test.csv");
 }
